@@ -83,8 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: any) {
       console.error('[Auth] Login error:', error);
-      if (error.message?.includes('fetch')) {
-        throw new Error('Network error: could not reach authentication service. Check if the backend is running and your environment variables are correct.');
+      if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
+        throw new Error('Network error contacting Supabase. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.');
       }
       throw error;
     }
@@ -125,8 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: any) {
       console.error('[Auth] Registration error:', error);
-      if (error.message?.includes('fetch')) {
-        throw new Error('Network error: could not reach authentication service. Check if the backend is running and your environment variables are correct.');
+      if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
+        throw new Error('Network error contacting Supabase. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.');
       }
       throw error;
     }
