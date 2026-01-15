@@ -11,19 +11,25 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
 
     try {
       await register(email, password, phone || undefined);
     } catch (err) {
       if (err instanceof Error) {
-        setError(err.message);
+        if (err.message === 'VERIFICATION_REQUIRED') {
+          setSuccess('Account created successfully! Please check your email to verify your account before signing in.');
+        } else {
+          setError(err.message);
+        }
       } else {
         setError('An unexpected error occurred. Please try again.');
       }
@@ -45,6 +51,12 @@ export default function RegisterPage() {
         {error && (
           <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-3 bg-green-50 border-l-4 border-green-500 text-green-700 text-sm rounded">
+            {success}
           </div>
         )}
 

@@ -60,43 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    if (data.session) {
-      setToken(data.session.access_token);
-      setUser({
-        id: data.user.id,
-        email: data.user.email || '',
-        phone: data.user.user_metadata?.phone,
-        createdAt: data.user.created_at,
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      router.push('/dashboard');
-    }
-  };
 
-  const register = async (email: string, password: string, phone?: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          phone: phone || null,
-        },
-      },
-    });
+      if (error) {
+        console.error('[Auth] Login failed:', error);
+        throw new Error(error.message || 'Login failed. Please check your credentials.');
+      }
 
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    if (data.user) {
       if (data.session) {
         setToken(data.session.access_token);
         setUser({
@@ -106,9 +80,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           createdAt: data.user.created_at,
         });
         router.push('/dashboard');
-      } else {
-        throw new Error('Registration successful! Please check your email to verify your account.');
       }
+    } catch (error: any) {
+      console.error('[Auth] Login error:', error);
+      if (error.message?.includes('fetch')) {
+        throw new Error('Network error: could not reach authentication service. Check if the backend is running and your environment variables are correct.');
+      }
+      throw error;
+    }
+  };
+
+  const register = async (email: string, password: string, phone?: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            phone: phone || null,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('[Auth] Registration failed:', error);
+        throw new Error(error.message || 'Registration failed. Please try again.');
+      }
+
+      if (data.user) {
+        if (data.session) {
+          setToken(data.session.access_token);
+          setUser({
+            id: data.user.id,
+            email: data.user.email || '',
+            phone: data.user.user_metadata?.phone,
+            createdAt: data.user.created_at,
+          });
+          console.log('[Auth] Registration successful, user logged in');
+          router.push('/dashboard');
+        } else {
+          console.log('[Auth] Registration successful, email verification required');
+          throw new Error('VERIFICATION_REQUIRED');
+        }
+      }
+    } catch (error: any) {
+      console.error('[Auth] Registration error:', error);
+      if (error.message?.includes('fetch')) {
+        throw new Error('Network error: could not reach authentication service. Check if the backend is running and your environment variables are correct.');
+      }
+      throw error;
     }
   };
 
