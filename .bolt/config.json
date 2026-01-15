@@ -1,0 +1,13 @@
+{
+  "projectType": "monorepo",
+  "frontend": {
+    "directory": "frontend",
+    "framework": "nextjs",
+    "port": 3000
+  },
+  "backend": {
+    "directory": ".",
+    "framework": "express",
+    "port": 4000
+  }
+}

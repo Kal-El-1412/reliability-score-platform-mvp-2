@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  passwordHash    String   @map("password_hash")
+  firstName       String?  @map("first_name")
+  lastName        String?  @map("last_name")
+  phone           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  events          Event[]
+  score           Score?
+  scoreHistory    ScoreHistory[]
+  userMissions    UserMission[]
+  walletTransactions WalletTransaction[]
+  riskProfile     RiskProfile?
+  features        Features?
+
+  @@map("users")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  eventType   String   @map("event_type")
+  category    String   @default("behavior")
+  timestamp   DateTime @default(now())
+  properties  Json     @default("{}")
+  deviceId    String?  @map("device_id")
+  riskScore   Float    @default(0) @map("risk_score")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@index([eventType, timestamp])
+  @@map("events")
+}
+
+model Features {
+  userId               String   @id @map("user_id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  streakDays           Int      @default(0) @map("streak_days")
+  activeDays30d        Int      @default(0) @map("active_days_30d")
+  activeDays90d        Int      @default(0) @map("active_days_90d")
+  meaningfulEvents30d  Int      @default(0) @map("meaningful_events_30d")
+  diversityIndex90d    Int      @default(0) @map("diversity_index_90d")
+  disputeCount90d      Int      @default(0) @map("dispute_count_90d")
+  reversalCount90d     Int      @default(0) @map("reversal_count_90d")
+  velocityFlags30d     Int      @default(0) @map("velocity_flags_30d")
+  riskFlags90d         Int      @default(0) @map("risk_flags_90d")
+  inactivityWeeks      Int      @default(0) @map("inactivity_weeks")
+  completionRate90d    Float    @default(0) @map("completion_rate_90d")
+  tenureDays           Int      @default(0) @map("tenure_days")
+  updatedAt            DateTime @default(now()) @map("updated_at")
+
+  @@map("features")
+}
+
+model Score {
+  userId      String   @id @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  totalScore  Int      @map("total_score")
+  subScores   Json     @map("sub_scores")
+  drivers     Json
+  lastUpdated DateTime @default(now()) @map("last_updated")
+
+  @@map("scores")
+}
+
+model ScoreHistory {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  timestamp   DateTime @default(now())
+  totalScore  Int      @map("total_score")
+
+  @@index([userId, timestamp])
+  @@map("score_history")
+}
+
+model Mission {
+  id              String   @id @default(cuid())
+  type            String
+  code            String   @unique
+  title           String
+  description     String
+  targetCount     Int      @default(1) @map("target_count")
+  rewardPoints    Int      @default(0) @map("reward_points")
+  scoreImpactHint Int      @default(0) @map("score_impact_hint")
+  activeFrom      DateTime @map("active_from")
+  activeTo        DateTime @map("active_to")
+  conditions      Json     @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  userMissions    UserMission[]
+
+  @@index([type])
+  @@map("missions")
+}
+
+model UserMission {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  missionId       String   @map("mission_id")
+  status          String   @default("assigned")
+  progressCount   Int      @default(0) @map("progress_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mission         Mission  @relation(fields: [missionId], references: [id])
+
+  @@index([userId])
+  @@index([missionId])
+  @@map("user_missions")
+}
+
+model Reward {
+  id              String   @id @default(cuid())
+  partnerId       String?  @map("partner_id")
+  type            String
+  title           String
+  description     String
+  costPoints      Int      @default(0) @map("cost_points")
+  valueDisplay    String   @map("value_display")
+  termsUrl        String?  @map("terms_url")
+  activeFrom      DateTime @map("active_from")
+  activeTo        DateTime @map("active_to")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  walletTransactions WalletTransaction[]
+
+  @@map("rewards")
+}
+
+model WalletTransaction {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  amount          Int
+  currency        String   @default("POINTS")
+  type            String
+  source          String
+  relatedId       String?  @map("related_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward          Reward?  @relation(fields: [relatedId], references: [id])
+
+  @@index([userId])
+  @@map("wallet_transactions")
+}
+
+model RiskProfile {
+  userId          String   @id @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  riskScore       Int      @default(0) @map("risk_score")
+  status          String   @default("ok")
+  flags           Json     @default("[]")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+  @@map("risk_profile")
+}
