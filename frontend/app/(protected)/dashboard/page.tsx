@@ -6,10 +6,53 @@ import { CardSkeleton } from '@/app/components/LoadingSkeleton';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 
+function ScoreSparkline({ history }: { history: Array<{ total_score: number; computed_at: string }> }) {
+  const sorted = [...history]
+    .sort((a, b) => new Date(a.computed_at).getTime() - new Date(b.computed_at).getTime());
+  const scores = sorted.map(h => h.total_score);
+  const minScore = Math.min(...scores);
+  const maxScore = Math.max(...scores);
+  const range = maxScore - minScore || 1;
+
+  const W = 400;
+  const H = 80;
+  const PAD = 10;
+
+  const pts = scores.map((s, i) => ({
+    x: PAD + (i / (scores.length - 1)) * (W - PAD * 2),
+    y: H - PAD - ((s - minScore) / range) * (H - PAD * 2),
+  }));
+
+  const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const areaD = `${pathD} L ${pts[pts.length - 1].x.toFixed(1)},${H} L ${pts[0].x.toFixed(1)},${H} Z`;
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-20" aria-label="Score trend chart">
+        <defs>
+          <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={areaD} fill="url(#sparkGrad)" />
+        <path d={pathD} fill="none" stroke="#6366f1" strokeWidth="2" strokeLinejoin="round" />
+        {pts.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r="3" fill="#6366f1" />
+        ))}
+      </svg>
+      <div className="flex justify-between text-xs text-slate-400 mt-1 px-2">
+        <span>{new Date(sorted[0].computed_at).toLocaleDateString()}</span>
+        <span>{new Date(sorted[sorted.length - 1].computed_at).toLocaleDateString()}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
-  const { data: scoreData, isLoading: isLoadingScore } = useScore();
-  const { data: historyData, isLoading: isLoadingHistory } = useScoreHistory();
-  const { data: walletData, isLoading: isLoadingWallet } = useWallet();
+  const { data: scoreData, isLoading: isLoadingScore, isError: isErrorScore, refetch: refetchScore } = useScore();
+  const { data: historyData, isLoading: isLoadingHistory, isError: isErrorHistory, refetch: refetchHistory } = useScoreHistory();
+  const { data: walletData, isLoading: isLoadingWallet, isError: isErrorWallet, refetch: refetchWallet } = useWallet();
 
   if (isLoadingScore || isLoadingHistory || isLoadingWallet) {
     return (
@@ -20,6 +63,25 @@ export default function DashboardPage() {
           <CardSkeleton />
           <CardSkeleton />
         </div>
+      </div>
+    );
+  }
+
+  if (isErrorScore || isErrorHistory || isErrorWallet) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+        <Card>
+          <CardContent className="text-center py-12">
+            <p className="text-slate-600 mb-4">Failed to load dashboard data. Please try again.</p>
+            <button
+              onClick={() => { refetchScore(); refetchHistory(); refetchWallet(); }}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Retry
+            </button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -193,6 +255,17 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {history.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Score Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScoreSparkline history={history} />
+          </CardContent>
+        </Card>
+      )}
+
       {history.length > 0 && (
         <Card>
           <CardHeader>
@@ -233,16 +306,16 @@ export default function DashboardPage() {
                         {entry.total_score}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
-                        {entry.sub_scores.consistency}
+                        {entry.sub_scores?.consistency ?? '—'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
-                        {entry.sub_scores.capacity}
+                        {entry.sub_scores?.capacity ?? '—'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
-                        {entry.sub_scores.integrity}
+                        {entry.sub_scores?.integrity ?? '—'}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
-                        {entry.sub_scores.engagement_quality}
+                        {entry.sub_scores?.engagement_quality ?? '—'}
                       </td>
                     </tr>
                   ))}

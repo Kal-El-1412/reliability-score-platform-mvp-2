@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet, useRewards, useRedeemReward } from '@/app/hooks/useScore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/app/components/Card';
 import { Button } from '@/app/components/Button';
@@ -15,6 +15,20 @@ export default function RewardsPage() {
   const redeemReward = useRedeemReward();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [selectedVoucher, setSelectedVoucher] = useState<RedeemRewardResponse | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showAllTx, setShowAllTx] = useState(false);
+
+  // Esc key dismiss + body scroll lock for the voucher modal
+  useEffect(() => {
+    if (!selectedVoucher) return;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setSelectedVoucher(null); setCopied(false); } };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [selectedVoucher]);
 
   const handleRedeemReward = async (rewardId: string) => {
     try {
@@ -168,7 +182,7 @@ export default function RewardsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {wallet?.transactions.slice(0, 5).map((tx) => (
+                {wallet?.transactions.slice(0, showAllTx ? undefined : 5).map((tx) => (
                   <div key={tx.transaction_id} className="flex items-center justify-between text-sm">
                     <div>
                       <div className="font-medium text-slate-900 capitalize">
@@ -187,6 +201,14 @@ export default function RewardsPage() {
                 ))}
                 {wallet?.transactions.length === 0 && (
                   <p className="text-sm text-slate-500">No transactions yet</p>
+                )}
+                {(wallet?.transactions.length ?? 0) > 5 && (
+                  <button
+                    onClick={() => setShowAllTx(v => !v)}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 mt-1"
+                  >
+                    {showAllTx ? 'Show less' : `Show all ${wallet?.transactions.length}`}
+                  </button>
                 )}
               </div>
             </CardContent>
@@ -238,16 +260,17 @@ export default function RewardsPage() {
                 <Button
                   onClick={() => {
                     navigator.clipboard.writeText(selectedVoucher.voucher.code);
-                    setToast({ message: 'Voucher code copied!', type: 'success' });
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
                   }}
                   variant="secondary"
                   className="w-full"
                 >
-                  Copy Code
+                  {copied ? 'Copied!' : 'Copy Code'}
                 </Button>
 
                 <Button
-                  onClick={() => setSelectedVoucher(null)}
+                  onClick={() => { setSelectedVoucher(null); setCopied(false); }}
                   className="w-full"
                 >
                   Close

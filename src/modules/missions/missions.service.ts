@@ -191,7 +191,7 @@ export class MissionsService {
     }
 
     const newProgressCount = userMission.progressCount + increment;
-    const newStatus = newProgressCount >= userMission.mission.targetCount ? 'in_progress' : 'in_progress';
+    const newStatus = newProgressCount >= userMission.mission.targetCount ? 'completed' : 'in_progress';
 
     const updated = await prisma.userMission.update({
       where: { id: userMission.id },

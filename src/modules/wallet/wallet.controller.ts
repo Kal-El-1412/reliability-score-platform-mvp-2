@@ -7,7 +7,9 @@ const walletService = new WalletService();
 export class WalletController {
   async getWallet(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { balance, transactions } = await walletService.getWallet(req.userId!);
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const balance = await walletService.getBalance(req.userId!);
+      const transactions = await walletService.getTransactions(req.userId!, limit);
 
       const formattedTransactions = transactions.map(tx => ({
         transaction_id: tx.id,
@@ -16,7 +18,7 @@ export class WalletController {
         currency: tx.currency,
         source: tx.source,
         related_id: tx.relatedId,
-        created_at: tx.createdAt,
+        created_at: tx.createdAt.toISOString(),
       }));
 
       res.status(200).json({

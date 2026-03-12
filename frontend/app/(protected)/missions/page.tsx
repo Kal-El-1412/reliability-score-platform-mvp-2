@@ -114,21 +114,17 @@ export default function MissionsPage() {
               <div className="w-full py-2 bg-green-50 text-green-700 text-center rounded-lg font-medium">
                 ✓ Completed
               </div>
-            ) : progress >= 100 ? (
+            ) : mission.status === 'expired' ? (
+              <div className="w-full py-2 bg-slate-100 text-slate-500 text-center rounded-lg font-medium text-sm">
+                Expired
+              </div>
+            ) : (
               <Button
                 onClick={() => handleCompleteMission(mission.mission_id)}
                 className="w-full"
                 isLoading={completeMission.isPending}
               >
-                Complete Mission
-              </Button>
-            ) : (
-              <Button
-                variant="secondary"
-                disabled
-                className="w-full"
-              >
-                In Progress
+                {progress >= 100 ? 'Complete Mission' : 'Mark Complete'}
               </Button>
             )}
           </div>

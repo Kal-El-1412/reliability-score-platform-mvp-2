@@ -79,6 +79,15 @@ export class RewardsService {
       now.getTime() + (30 * 24 * 60 * 60 * 1000)
     ));
 
+    await prisma.rewardRedemption.create({
+      data: {
+        userId,
+        rewardId: reward.id,
+        voucherCode,
+        expiresAt,
+      },
+    });
+
     await eventsService.createEvent(userId, {
       eventType: 'ENG.REWARD_REDEEMED',
       category: 'engagement',

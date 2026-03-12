@@ -9,6 +9,10 @@ const walletService = new WalletService();
 export class MissionsController {
   async getActiveMissions(req: AuthRequest, res: Response, next: NextFunction) {
     try {
+      // Auto-assign missions on first visit so new users never see an empty list
+      await missionsService.assignDailyMissionsForUser(req.userId!);
+      await missionsService.assignWeeklyMissionsForUser(req.userId!);
+
       const userMissions = await missionsService.getActiveMissionsForUser(req.userId!);
 
       const missions = userMissions.map(um => ({
@@ -21,8 +25,8 @@ export class MissionsController {
         progress_count: um.progressCount,
         reward_points: um.mission.rewardPoints,
         score_impact_hint: um.mission.scoreImpactHint,
-        active_from: um.mission.activeFrom,
-        active_to: um.mission.activeTo,
+        active_from: um.mission.activeFrom.toISOString(),
+        active_to: um.mission.activeTo.toISOString(),
       }));
 
       res.status(200).json({
@@ -60,7 +64,7 @@ export class MissionsController {
         status: 'completed',
         data: {
           mission_id: completedMission.mission.id,
-          completed_at: completedMission.completedAt,
+          completed_at: completedMission.completedAt?.toISOString() ?? null,
           rewards: {
             wallet_points_earned: completedMission.mission.rewardPoints,
           },

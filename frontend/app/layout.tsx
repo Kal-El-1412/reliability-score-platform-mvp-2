@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from './providers/AuthContext';
 import { QueryProvider } from './providers/QueryProvider';
+import { ToastProvider } from './providers/ToastContext';
 
 export const metadata: Metadata = {
   title: 'Reliability Score Platform',
@@ -18,7 +19,9 @@ export default function RootLayout({
       <body>
         <QueryProvider>
           <AuthProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </AuthProvider>
         </QueryProvider>
       </body>

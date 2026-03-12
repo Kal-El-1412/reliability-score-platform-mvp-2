@@ -14,7 +14,7 @@ export class RewardsController {
         data: {
           user_id: req.userId,
           rewards: rewards.map(r => ({
-            id: r.id,
+            reward_id: r.id,
             partner_id: r.partnerId,
             type: r.type,
             title: r.title,
@@ -22,8 +22,8 @@ export class RewardsController {
             cost_points: r.costPoints,
             value_display: r.valueDisplay,
             terms_url: r.termsUrl,
-            active_from: r.activeFrom,
-            active_to: r.activeTo,
+            active_from: r.activeFrom.toISOString(),
+            active_to: r.activeTo.toISOString(),
             eligible: r.eligible,
           })),
         },
@@ -50,7 +50,9 @@ export class RewardsController {
           },
           voucher: {
             code: result.voucher.code,
-            expires_at: result.voucher.expires_at,
+            expires_at: result.voucher.expires_at instanceof Date
+              ? result.voucher.expires_at.toISOString()
+              : result.voucher.expires_at,
           },
           wallet_transaction_id: result.transaction.id,
           points_deducted: Math.abs(result.transaction.amount),

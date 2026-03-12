@@ -60,13 +60,19 @@ export class ScoringJob {
       let successCount = 0;
       let errorCount = 0;
 
-      for (const userId of userIds) {
-        try {
-          await this.calculateScoreForUser(userId);
-          successCount++;
-        } catch (error) {
-          logger.error(`Failed to calculate score for user ${userId}:`, error);
-          errorCount++;
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+        const batch = userIds.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(
+          batch.map(userId => this.calculateScoreForUser(userId))
+        );
+        for (const result of results) {
+          if (result.status === 'fulfilled') {
+            successCount++;
+          } else {
+            logger.error('Failed to calculate score in batch:', result.reason);
+            errorCount++;
+          }
         }
       }
 

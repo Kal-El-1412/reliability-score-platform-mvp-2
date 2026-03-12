@@ -33,6 +33,20 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// 401 interceptor: redirect to login on expired token.
+// Guard against auth endpoints (wrong password returns 401 but should NOT redirect).
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isAuthEndpoint = error.config?.url?.includes('/auth/');
+    if (error.response?.status === 401 && !isAuthEndpoint && typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -84,7 +98,7 @@ export const authApi = {
   getMe: async (): Promise<User> => {
     try {
       const response = await apiClient.get<{ status: string; data: { user: User } }>(
-        '/user/me'
+        '/auth/me'
       );
       return response.data.data.user;
     } catch (error) {

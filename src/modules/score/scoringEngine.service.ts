@@ -263,6 +263,7 @@ export class ScoringEngineService {
       data: {
         userId,
         totalScore: scoreResult.totalScore,
+        subScores: scoreResult.subScores as any,
         timestamp: new Date(),
       },
     });

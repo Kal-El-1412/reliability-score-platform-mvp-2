@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Router } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import 'express-async-errors';
@@ -26,18 +26,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check stays at root — no versioning required
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use('/auth', authRoutes);
-app.use('/user', authRoutes);
-app.use('/events', eventsRoutes);
-app.use('/score', scoreRoutes);
-app.use('/missions', missionsRoutes);
-app.use('/rewards', rewardsRoutes);
-app.use('/wallet', walletRoutes);
-app.use('/internal/risk', riskRoutes);
+const v1 = Router();
+v1.use('/auth', authRoutes);
+v1.use('/user', authRoutes);
+v1.use('/events', eventsRoutes);
+v1.use('/score', scoreRoutes);
+v1.use('/missions', missionsRoutes);
+v1.use('/rewards', rewardsRoutes);
+v1.use('/wallet', walletRoutes);
+v1.use('/internal/risk', riskRoutes);
+
+app.use('/v1', v1);
 
 app.use(errorHandler);
 

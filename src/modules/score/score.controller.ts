@@ -15,7 +15,9 @@ export class ScoreController {
           user_id: scoreData.userId,
           total_score: scoreData.totalScore,
           sub_scores: scoreData.subScores,
-          last_updated: scoreData.lastUpdated,
+          last_updated: scoreData.lastUpdated instanceof Date
+            ? scoreData.lastUpdated.toISOString()
+            : scoreData.lastUpdated,
           drivers: scoreData.drivers,
           next_recommended_actions: scoreData.nextActions,
         },
@@ -33,16 +35,18 @@ export class ScoreController {
 
       const history = await scoreService.getScoreHistory(req.userId!, from, to, limit);
 
-      const points = history.map(h => ({
-        timestamp: h.timestamp,
+      const historyEntries = history.map(h => ({
+        score_id: h.id,
         total_score: h.totalScore,
+        computed_at: h.timestamp.toISOString(),
+        sub_scores: h.subScores ?? null,
       }));
 
       res.status(200).json({
         status: 'success',
         data: {
           user_id: req.userId,
-          points,
+          history: historyEntries,
         },
       });
     } catch (error) {

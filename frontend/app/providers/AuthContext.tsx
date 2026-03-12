@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabase';
+import { authApi } from '../lib/apiClient';
 import type { User } from '../lib/types';
 
 interface AuthContextType {
@@ -22,118 +22,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  // On mount, restore session from localStorage
   useEffect(() => {
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setToken(session.access_token);
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          phone: session.user.user_metadata?.phone,
-          createdAt: session.user.created_at,
-        });
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      if (stored) {
+        try {
+          const me = await authApi.getMe();
+          setToken(stored);
+          setUser(me);
+        } catch {
+          // Token invalid or expired — clear it
+          localStorage.removeItem('auth_token');
+        }
       }
       setIsLoading(false);
     };
 
     initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        setToken(session.access_token);
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          phone: session.user.user_metadata?.phone,
-          createdAt: session.user.created_at,
-        });
-      } else {
-        setToken(null);
-        setUser(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('[Auth] Login failed:', error);
-        throw new Error(error.message || 'Login failed. Please check your credentials.');
-      }
-
-      if (data.session) {
-        setToken(data.session.access_token);
-        setUser({
-          id: data.user.id,
-          email: data.user.email || '',
-          phone: data.user.user_metadata?.phone,
-          createdAt: data.user.created_at,
-        });
-        router.push('/dashboard');
-      }
-    } catch (error: any) {
-      console.error('[Auth] Login error:', error);
-      if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
-        throw new Error('Network error contacting Supabase. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.');
-      }
-      throw error;
-    }
+    const result = await authApi.login({ email, password });
+    localStorage.setItem('auth_token', result.token);
+    setToken(result.token);
+    setUser(result.user);
+    router.push('/dashboard');
   };
 
   const register = async (email: string, password: string, phone?: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            phone: phone || null,
-          },
-        },
-      });
-
-      if (error) {
-        console.error('[Auth] Registration failed:', error);
-        throw new Error(error.message || 'Registration failed. Please try again.');
-      }
-
-      if (data.user) {
-        if (data.session) {
-          setToken(data.session.access_token);
-          setUser({
-            id: data.user.id,
-            email: data.user.email || '',
-            phone: data.user.user_metadata?.phone,
-            createdAt: data.user.created_at,
-          });
-          console.log('[Auth] Registration successful, user logged in');
-          router.push('/dashboard');
-        } else {
-          console.log('[Auth] Registration successful, email verification required');
-          throw new Error('VERIFICATION_REQUIRED');
-        }
-      }
-    } catch (error: any) {
-      console.error('[Auth] Registration error:', error);
-      if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
-        throw new Error('Network error contacting Supabase. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.');
-      }
-      throw error;
-    }
+    const result = await authApi.register({ email, password, phone });
+    localStorage.setItem('auth_token', result.token);
+    setToken(result.token);
+    setUser(result.user);
+    router.push('/dashboard');
   };
 
-  const logout = async () => {
-    await supabase.auth.signOut();
+  const logout = () => {
+    localStorage.removeItem('auth_token');
     setToken(null);
     setUser(null);
     router.push('/login');

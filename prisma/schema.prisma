@@ -17,13 +17,14 @@ model User {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  events          Event[]
-  score           Score?
-  scoreHistory    ScoreHistory[]
-  userMissions    UserMission[]
+  events             Event[]
+  score              Score?
+  scoreHistory       ScoreHistory[]
+  userMissions       UserMission[]
   walletTransactions WalletTransaction[]
-  riskProfile     RiskProfile?
-  features        Features?
+  riskProfile        RiskProfile?
+  features           Features?
+  rewardRedemptions  RewardRedemption[]
 
   @@map("users")
 }
@@ -86,6 +87,7 @@ model ScoreHistory {
 
   timestamp   DateTime @default(now())
   totalScore  Int      @map("total_score")
+  subScores   Json?    @map("sub_scores")
 
   @@index([userId, timestamp])
   @@map("score_history")
@@ -142,8 +144,24 @@ model Reward {
   createdAt       DateTime @default(now()) @map("created_at")
 
   walletTransactions WalletTransaction[]
+  redemptions        RewardRedemption[]
 
   @@map("rewards")
+}
+
+model RewardRedemption {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  rewardId    String   @map("reward_id")
+  voucherCode String   @map("voucher_code")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward      Reward   @relation(fields: [rewardId], references: [id])
+
+  @@index([userId])
+  @@map("reward_redemptions")
 }
 
 model WalletTransaction {
